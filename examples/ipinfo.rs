@@ -1,15 +1,12 @@
-use bevy::{prelude::*, time::common_conditions::on_timer};
+use bevy::{ prelude::*, time::common_conditions::on_timer };
 use bevy_http_client::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins((MinimalPlugins, HttpClientPlugin))
         .add_systems(Update, (handle_response, handle_error))
-        .add_systems(
-            Update,
-            send_request.run_if(on_timer(std::time::Duration::from_secs(1))),
-        )
-        .run()
+        .add_systems(Update, send_request.run_if(on_timer(std::time::Duration::from_secs(1))))
+        .run();
 }
 
 fn send_request(mut ev_request: EventWriter<HttpRequest>) {

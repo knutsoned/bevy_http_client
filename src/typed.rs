@@ -1,14 +1,14 @@
 use std::marker::PhantomData;
 
-use bevy::app::{App, PreUpdate};
-use bevy::ecs::system::CommandQueue;
+use bevy::app::{ App, PreUpdate };
+use bevy::ecs::world::CommandQueue;
 use bevy::hierarchy::DespawnRecursiveExt;
-use bevy::prelude::{Commands, Deref, Entity, Event, EventReader, Events, ResMut, World};
+use bevy::prelude::{ Commands, Deref, Entity, Event, EventReader, Events, ResMut, World };
 use bevy::tasks::IoTaskPool;
-use ehttp::{Request, Response};
+use ehttp::{ Request, Response };
 use serde::Deserialize;
 
-use crate::{HttpClientSetting, RequestTask};
+use crate::{ HttpClientSetting, RequestTask };
 
 pub trait HttpTypedRequestTrait {
     /// Registers a new request type `T` to the application.
@@ -29,13 +29,13 @@ pub trait HttpTypedRequestTrait {
     /// app.register_request_type::<MyRequestType>();
     /// ```
     fn register_request_type<T: for<'a> Deserialize<'a> + Send + Sync + 'static>(
-        &mut self,
+        &mut self
     ) -> &mut Self;
 }
 
 impl HttpTypedRequestTrait for App {
     fn register_request_type<T: for<'a> Deserialize<'a> + Send + Sync + 'static>(
-        &mut self,
+        &mut self
     ) -> &mut Self {
         self.add_event::<TypedRequest<T>>();
         self.add_event::<TypedResponse<T>>();
@@ -65,10 +65,7 @@ impl HttpTypedRequestTrait for App {
 /// let typed_request = TypedRequest::new(request);
 /// ```
 #[derive(Debug, Event)]
-pub struct TypedRequest<T>
-where
-    T: for<'a> Deserialize<'a>,
-{
+pub struct TypedRequest<T> where T: for<'a> Deserialize<'a> {
     pub from_entity: Option<Entity>,
     pub request: Request,
     inner: PhantomData<T>,
@@ -102,10 +99,7 @@ impl<T: for<'a> serde::Deserialize<'a>> TypedRequest<T> {
 /// let response = TypedResponse { inner: MyResponseType };
 /// ```
 #[derive(Debug, Deref, Event)]
-pub struct TypedResponse<T>
-where
-    T: for<'a> Deserialize<'a>,
-{
+pub struct TypedResponse<T> where T: for<'a> Deserialize<'a> {
     #[deref]
     inner: T,
 }
@@ -144,7 +138,7 @@ impl<T> TypedResponseError<T> {
 fn handle_typed_request<T: for<'a> Deserialize<'a> + Send + Sync + 'static>(
     mut commands: Commands,
     mut req_res: ResMut<HttpClientSetting>,
-    mut requests: EventReader<TypedRequest<T>>,
+    mut requests: EventReader<TypedRequest<T>>
 ) {
     let thread_pool = IoTaskPool::get();
     for request in requests.read() {
@@ -165,8 +159,9 @@ fn handle_typed_request<T: for<'a> Deserialize<'a> + Send + Sync + 'static>(
                     command_queue.push(move |world: &mut World| {
                         match response {
                             Ok(response) => {
-                                let result: Result<T, _> =
-                                    serde_json::from_slice(response.bytes.as_slice());
+                                let result: Result<T, _> = serde_json::from_slice(
+                                    response.bytes.as_slice()
+                                );
 
                                 match result {
                                     // deserialize success, send response
@@ -182,8 +177,9 @@ fn handle_typed_request<T: for<'a> Deserialize<'a> + Send + Sync + 'static>(
                                             .get_resource_mut::<Events<TypedResponseError<T>>>()
                                             .unwrap()
                                             .send(
-                                                TypedResponseError::new(e.to_string())
-                                                    .response(response),
+                                                TypedResponseError::new(e.to_string()).response(
+                                                    response
+                                                )
                                             );
                                     }
                                 }

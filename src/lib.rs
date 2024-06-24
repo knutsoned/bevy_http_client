@@ -1,12 +1,12 @@
 #![doc = include_str!("../README.md")]
 
-use bevy::ecs::system::CommandQueue;
+use bevy::ecs::world::CommandQueue;
 use bevy::prelude::*;
 use bevy::tasks::IoTaskPool;
 use crossbeam_channel::Receiver;
 
 use crate::prelude::TypedRequest;
-use ehttp::{Headers, Request, Response};
+use ehttp::{ Headers, Request, Response };
 
 pub mod prelude;
 mod typed;
@@ -27,7 +27,7 @@ pub struct HttpClientPlugin;
 
 impl Plugin for HttpClientPlugin {
     fn build(&self, app: &mut App) {
-        if !app.world.contains_resource::<HttpClientSetting>() {
+        if !app.world().contains_resource::<HttpClientSetting>() {
             app.init_resource::<HttpClientSetting>();
         }
         app.add_event::<HttpRequest>();
@@ -301,10 +301,14 @@ impl HttpClient {
         if let Some(headers) = self.headers.as_mut() {
             headers.insert("Content-Type".to_string(), "application/json".to_string());
         } else {
-            self.headers = Some(Headers::new(&[
-                ("Content-Type", "application/json"),
-                ("Accept", "*/*"),
-            ]));
+            self.headers = Some(
+                Headers::new(
+                    &[
+                        ("Content-Type", "application/json"),
+                        ("Accept", "*/*"),
+                    ]
+                )
+            );
         }
 
         self.body = serde_json::to_vec(body).unwrap();
@@ -448,7 +452,7 @@ impl HttpClient {
                 #[cfg(target_arch = "wasm32")]
                 mode: self.mode,
             },
-            self.from_entity,
+            self.from_entity
         )
     }
 }
@@ -476,7 +480,7 @@ pub struct RequestTask(pub Receiver<CommandQueue>);
 fn handle_request(
     mut commands: Commands,
     mut req_res: ResMut<HttpClientSetting>,
-    mut requests: EventReader<HttpRequest>,
+    mut requests: EventReader<HttpRequest>
 ) {
     let thread_pool = IoTaskPool::get();
     for request in requests.read() {
@@ -530,7 +534,7 @@ fn handle_request(
 fn handle_tasks(
     mut commands: Commands,
     mut req_res: ResMut<HttpClientSetting>,
-    mut request_tasks: Query<&RequestTask>,
+    mut request_tasks: Query<&RequestTask>
 ) {
     for task in request_tasks.iter_mut() {
         if let Ok(mut command_queue) = task.0.try_recv() {
